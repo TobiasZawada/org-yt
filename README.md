@@ -1,7 +1,7 @@
 # org-yt
 Youtube links in org-mode, see  https://emacs.stackexchange.com/questions/38098/org-mode-custom-youtube-link-syntax
 
-After installing and loading this library you can use links with the format
+After installing and loading this library in emacs you can use links with the format
 
 `[[yt:<video-id>]]`
 
