@@ -9,4 +9,5 @@ or
 
 `[[yt:<video-id>][description]]`
 
-in your org-mode document. If you display inline-images in org-mode the image for the video is downloaded from youtube and if you click on the image the video-url is opened in the browser.
+in your org-mode document. If you display inline-images in org-mode the link is replaced by the image for the video downloaded from youtube.
+When you click on the link or on the image the video-url is opened in the browser.
