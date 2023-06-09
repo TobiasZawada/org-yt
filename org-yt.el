@@ -131,7 +131,7 @@ This function is almost a duplicate of a part of `org-display-inline-images'."
 Use this as :image-data-fun property in `org-link-properties'.
 See `org-display-user-inline-images' for a description of :image-data-fun."
   (when (string-match org-yt-video-id-regexp link)
-    (org-yt-get-image (format "http://img.youtube.com/vi/%s/0.jpg" link))))
+    (org-yt-get-image (format "https://img.youtube.com/vi/%s/0.jpg" link))))
 
 (org-link-set-parameters org-yt-url-protocol
 			 :follow #'org-yt-follow
