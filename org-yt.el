@@ -32,6 +32,14 @@
   :group 'org-yt
   :type 'string)
 
+(defcustom org-yt-cache-directory "~/.emacs.d/yt-cache"
+  "Directory used to cache thumbnails"
+  :group 'org-yt
+  :type 'string
+  )
+
+
+
 (defun org-image-update-overlay (file link &optional data-p refresh)
   "Create image overlay for FILE associtated with org-element LINK.
 If DATA-P is non-nil FILE is not a file name but a string with the image data.
@@ -107,17 +115,65 @@ This function is almost a duplicate of a part of `org-display-inline-images'."
               (push ov org-inline-image-overlays)
               ov)))))))
 
-(defun org-yt-get-image (url)
+(defun org-yt-get-image (video-id)
   "Retrieve image from URL."
-  (let ((image-buf (url-retrieve-synchronously url)))
-    (when image-buf
-      (with-current-buffer image-buf
-        (goto-char (point-min))
-        (when (looking-at "HTTP/")
-          (delete-region (point-min)
-                         (progn (re-search-forward "\n[\n]+")
-                                (point))))
-        (buffer-substring-no-properties (point-min) (point-max))))))
+  (condition-case err
+      (let* ((url (format "https://img.youtube.com/vi/%s/0.jpg" video-id))
+             (image-buf (url-retrieve-synchronously url)))
+        (when image-buf
+          (with-current-buffer image-buf
+            (goto-char (point-min))
+            (when (looking-at "HTTP/")
+              (delete-region (point-min)
+                             (progn (re-search-forward "\n[\n]+")
+                                    (point))))
+            (buffer-substring-no-properties (point-min) (point-max)))))
+    (error
+     (message "Retrieving thumbnail for video [%s] [%s]" video-id err)
+     nil
+     )))
+
+(defun org-yt-image-in-cache (video-id)
+  "retrieve thumbnail from cache"
+  ;; try it, does it work, good.
+  ;; Not? file not in cache or an error. there is nothing we can do
+  (condition-case err
+      (with-temp-buffer
+        (insert-file-contents-literally (format "%s/%s.jpg" org-yt-cache-directory video-id))
+        (let (
+              (thumbnail (string-make-unibyte
+                          (buffer-substring-no-properties (point-min) (point-max))))
+              )
+          ;; make sure we got something
+          (if (> (string-bytes thumbnail ) 0)
+              thumbnail 
+            nil)))
+    (error
+;;     (message "error reading from cache [%s] [%s]" video-id err)
+     nil
+     )))
+
+(defun org-yt-image-to-cache (video-id image)
+  "Save the thumbnail to the cache."
+  ;; but only do if there is data
+  (when (> (string-bytes image) 0)
+    (condition-case err
+        (with-temp-buffer
+          (insert image)
+          (write-region (point-min) (point-max)
+                        (format "%s/%s.jpg" org-yt-cache-directory video-id)))
+      (error
+       (message "Unable to write video thumbnail for video [%s] to cache [%s]... continuing" video-id err)
+       )))
+  image
+  )
+
+
+(defun org-yt-get-image-for-id (video-id)
+  "Retrieve thumbnail for video-id. Try cache first."
+  (or (org-yt-image-in-cache video-id)
+      (org-yt-image-to-cache video-id (org-yt-get-image video-id)
+       )))
 
 (defconst org-yt-video-id-regexp "[-_[:alnum:]]\\{10\\}[AEIMQUYcgkosw048]"
   "Regexp matching youtube video id's taken from `https://webapps.stackexchange.com/questions/54443/format-for-id-of-youtube-video'.")
@@ -131,7 +187,7 @@ This function is almost a duplicate of a part of `org-display-inline-images'."
 Use this as :image-data-fun property in `org-link-properties'.
 See `org-display-user-inline-images' for a description of :image-data-fun."
   (when (string-match org-yt-video-id-regexp link)
-    (org-yt-get-image (format "https://img.youtube.com/vi/%s/0.jpg" link))))
+    (org-yt-get-image-for-id link)))
 
 (org-link-set-parameters org-yt-url-protocol
 			 :follow #'org-yt-follow
