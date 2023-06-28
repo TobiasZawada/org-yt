@@ -38,6 +38,13 @@
   :type 'string
   )
 
+(defcustom org-yt-use-cache nil
+  "When not nil, maintain a cache of downloaded thumbnails"
+  :group 'org-yt
+  :type 'boolean
+  )
+
+
 
 
 (defun org-image-update-overlay (file link &optional data-p refresh)
@@ -177,9 +184,13 @@ This function is almost a duplicate of a part of `org-display-inline-images'."
 
 (defun org-yt-get-image-for-id (video-id)
   "Retrieve thumbnail for video-id. Try cache first."
-  (or (org-yt-image-in-cache video-id)
-      (org-yt-image-to-cache video-id (org-yt-get-image video-id)
-       )))
+  (if org-yt-use-cache
+      (or (org-yt-image-in-cache video-id)
+          (org-yt-image-to-cache video-id (org-yt-get-image video-id)
+                                 ))
+    (org-yt-get-image video-id)
+    )
+  )
 
 (defconst org-yt-video-id-regexp "[-_[:alnum:]]\\{10\\}[AEIMQUYcgkosw048]"
   "Regexp matching youtube video id's taken from `https://webapps.stackexchange.com/questions/54443/format-for-id-of-youtube-video'.")
