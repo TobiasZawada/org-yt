@@ -42,7 +42,6 @@ This function is almost a duplicate of a part of `org-display-inline-images'."
     (let ((width
            ;; Apply `org-image-actual-width' specifications.
            (cond
-            ((not (image-type-available-p 'imagemagick)) nil)
             ((eq org-image-actual-width t) nil)
             ((listp org-image-actual-width)
              (or
@@ -76,7 +75,9 @@ This function is almost a duplicate of a part of `org-display-inline-images'."
       (if (and (car-safe old) refresh)
           (image-refresh (overlay-get (cdr old) 'display))
         (let ((image (create-image file
-                                   (and width 'imagemagick)
+                                   (and (image-type-available-p 'imagemagick)
+                                        width
+                                        'imagemagick)
                                    data-p
                                    :width width)))
           (when image
