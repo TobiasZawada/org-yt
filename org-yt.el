@@ -154,14 +154,20 @@ This function is almost a duplicate of a part of `org-display-inline-images'."
      )))
 
 (defun org-yt-image-to-cache (video-id image)
-  "Save the thumbnail to the cache."
+  "Save the thumbnail to the cache. Always returns image, even on error."
   ;; but only do if there is data
   (when (> (string-bytes image) 0)
     (condition-case err
-        (with-temp-buffer
-          (insert image)
-          (write-region (point-min) (point-max)
-                        (format "%s/%s.jpg" org-yt-cache-directory video-id)))
+        (progn
+          ;; create directory if it does not exist
+          (if (not (file-directory-p org-yt-cache-directory))
+              (make-directory org-yt-cache-directory t)
+            )
+          (with-temp-buffer
+            (insert image)
+            (write-region (point-min) (point-max)
+                          (format "%s/%s.jpg" org-yt-cache-directory video-id)))
+          )
       (error
        (message "Unable to write video thumbnail for video [%s] to cache [%s]... continuing" video-id err)
        )))
