@@ -33,7 +33,7 @@
   :type 'string)
 
 (defcustom org-yt-cache-directory "~/.emacs.d/yt-cache"
-  "Directory used to cache thumbnails"
+  "Directory used to cache thumbnails. Make sure it does not end in /"
   :group 'org-yt
   :type 'string
   )
