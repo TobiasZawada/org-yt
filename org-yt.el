@@ -32,20 +32,27 @@
   :group 'org-yt
   :type 'string)
 
-(defcustom org-yt-cache-directory (concat user-emacs-directory "yt-cache")
-  "Directory used to cache thumbnails. Make sure it does not end in /"
+(defcustom org-yt-cache-directory (expand-file-name "yt-cache" user-emacs-directory)
+  "Directory used to cache thumbnails."
   :group 'org-yt
   :type 'string
   )
 
-(defcustom org-yt-use-cache nil
-  "When not nil, maintain a cache of downloaded thumbnails"
+(defcustom org-yt-use-cache t
+  "When not nil, maintain a cache of downloaded thumbnails."
   :group 'org-yt
   :type 'boolean
   )
 
+(defcustom org-yt-cache-limit 100
+  "Maximal number of cached thumbnail image files."
+  :group 'org-yt
+  :type '(choice :format "%{%t%}: %[Cache Limit Type%] %v" :label "Enable/Disable Cache Limit" :tag "Delimit Cache Size" (const :tag "Unlimited" nil) (number :tag "Number of Images")))
 
-
+;;; End of Customizations
+
+(defconst org-yt-image-file-extension "jpg"
+  "Extension for Youtube thumbnail image files.")
 
 (defun org-image-update-overlay (file link &optional data-p refresh)
   "Create image overlay for FILE associtated with org-element LINK.
@@ -123,9 +130,9 @@ This function is almost a duplicate of a part of `org-display-inline-images'."
               ov)))))))
 
 (defun org-yt-get-image (video-id)
-  "Retrieve image from URL."
+  "Retrieve thumbnail image for VIDEO-ID."
   (condition-case err
-      (let* ((url (format "https://img.youtube.com/vi/%s/0.jpg" video-id))
+      (let* ((url (format "https://img.youtube.com/vi/%s/0.%s" video-id org-yt-image-file-extension))
              (image-buf (url-retrieve-synchronously url)))
         (when image-buf
           (with-current-buffer image-buf
@@ -140,54 +147,76 @@ This function is almost a duplicate of a part of `org-display-inline-images'."
      nil
      )))
 
+(defun org-yt-image-cache-file-name (video-id)
+  "Return absolute cache file name for VIDEO-ID."
+  (expand-file-name (format "%s.%s" video-id org-yt-image-file-extension) org-yt-cache-directory))
+
 (defun org-yt-image-in-cache (video-id)
-  "retrieve thumbnail from cache"
+  "Retrieve thumbnail for VIDEO-ID from cache."
   ;; try it, does it work, good.
   ;; Not? file not in cache or an error. there is nothing we can do
-  (condition-case err
+  (condition-case nil
       (with-temp-buffer
-        (insert-file-contents-literally (format "%s/%s.jpg" org-yt-cache-directory video-id))
+	(set-buffer-multibyte nil)
+        (insert-file-contents-literally (org-yt-image-cache-file-name video-id))
         (let (
-              (thumbnail (string-make-unibyte
-                          (buffer-substring-no-properties (point-min) (point-max))))
+              (thumbnail(buffer-string))
               )
           ;; make sure we got something
-          (if (> (string-bytes thumbnail ) 0)
-              thumbnail 
+          (if (> (string-bytes thumbnail) 0)
+              thumbnail
             nil)))
-    (error
-;;     (message "error reading from cache [%s] [%s]" video-id err)
-     nil
-     )))
+    (error nil)))
+
+(cl-defun org-yt-old-images-in-cache (&optional (max-cache-size org-yt-cache-limit))
+  "Determine the oldest images exceeding the cache limit.
+The age of images is determined by their access time.
+The cache limit is given by `org-yt-cache-limit'.
+Return nil when `org-yt-cache-limit' is not a positive number."
+  (when (and (numberp max-cache-size)
+	     (> max-cache-size 0))
+    (nthcdr max-cache-size
+	    (sort
+	     (directory-files
+	      org-yt-cache-directory
+	      t
+	      (format "\\.%s\\'" (regexp-quote org-yt-image-file-extension)))
+	     (lambda (fn1 fn2)
+	       (time-less-p
+		(file-attribute-access-time (file-attributes fn2))
+		(file-attribute-access-time (file-attributes fn1))))))))
+;; Test:
+;; (org-yt-cache-old-images 2)
 
 (defun org-yt-image-to-cache (video-id image)
-  "Save the thumbnail to the cache. Always returns image, even on error."
+  "Save the thumbnail IMAGE for VIDEO-ID to the cache.
+Always returns IMAGE, even if the save operation fails."
   ;; but only do if there is data
   (when (> (string-bytes image) 0)
     (condition-case err
         (progn
           ;; create directory if it does not exist
-          (if (not (file-directory-p org-yt-cache-directory))
+          (unless (file-directory-p org-yt-cache-directory)
               (make-directory org-yt-cache-directory t)
             )
           (with-temp-buffer
             (insert image)
             (write-region (point-min) (point-max)
-                          (format "%s/%s.jpg" org-yt-cache-directory video-id)))
+                          (org-yt-image-cache-file-name video-id)))
           )
       (error
        (message "Unable to write video thumbnail for video [%s] to cache [%s]... continuing" video-id err)
        )))
-  image
-  )
-
+  (dolist (old-file (org-yt-old-images-in-cache))
+    (delete-file old-file))
+  image)
 
 (defun org-yt-get-image-for-id (video-id)
-  "Retrieve thumbnail for video-id. Try cache first."
+  "Retrieve thumbnail for VIDEO-ID.
+Try cache first."
   (if org-yt-use-cache
       (or (org-yt-image-in-cache video-id)
-          (org-yt-image-to-cache video-id (org-yt-get-image video-id)
-                                 ))
+          (org-yt-image-to-cache video-id (org-yt-get-image video-id)))
     (org-yt-get-image video-id)
     )
   )
