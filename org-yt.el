@@ -253,7 +253,11 @@ If that function returns nil the link is not interpreted as image.
 Otherwise the return value is the image data string to be displayed.
 
 Note that only bracket links are allowed as image data links
-with one of the formats [[PROTOCOL:LINK]] or [[PROTOCOL:LINK][DESCRIPTION]] are recognized."
+with one of the formats
+ [[PROTOCOL:LINK]]
+or
+ [[PROTOCOL:LINK][DESCRIPTION]]
+are recognized."
   (interactive)
   (when (and (called-interactively-p 'any)
              (use-region-p))
