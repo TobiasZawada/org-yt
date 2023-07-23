@@ -54,6 +54,14 @@
 (defconst org-yt-image-file-extension "jpg"
   "Extension for Youtube thumbnail image files.")
 
+(defun org-yt-image-link (video-id)
+  "Return image link for VIDEO-ID as string."
+  (format "https://img.youtube.com/vi/%s/0.%s" video-id org-yt-image-file-extension))
+
+(defun org-yt-video-link (video-id)
+  "Return video link for VIDEO-ID as string."
+  (concat "https://youtu.be/" video-id))
+
 (defun org-image-update-overlay (file link &optional data-p refresh)
   "Create image overlay for FILE associtated with org-element LINK.
 If DATA-P is non-nil FILE is not a file name but a string with the image data.
@@ -132,7 +140,7 @@ This function is almost a duplicate of a part of `org-display-inline-images'."
 (defun org-yt-get-image (video-id)
   "Retrieve thumbnail image for VIDEO-ID."
   (condition-case err
-      (let* ((url (format "https://img.youtube.com/vi/%s/0.%s" video-id org-yt-image-file-extension))
+      (let* ((url (org-yt-image-link video-id))
              (image-buf (url-retrieve-synchronously url)))
         (when image-buf
           (with-current-buffer image-buf
@@ -171,7 +179,8 @@ This function is almost a duplicate of a part of `org-display-inline-images'."
 (cl-defun org-yt-old-images-in-cache (&optional (max-cache-size org-yt-cache-limit))
   "Determine the oldest images exceeding the cache limit.
 The age of images is determined by their access time.
-The cache limit is given by `org-yt-cache-limit'.
+The cache limit is given by MAX-CACHE-SIZE.
+The default for MAX-CACHE-SIZE is `org-yt-cache-limit'.
 Return nil when `org-yt-cache-limit' is not a positive number."
   (when (and (numberp max-cache-size)
 	     (> max-cache-size 0))
@@ -226,7 +235,7 @@ Try cache first."
 
 (defun org-yt-follow (video-id)
   "Open youtube with VIDEO-ID."
-  (browse-url (concat "https://youtu.be/" video-id)))
+  (browse-url (org-yt-video-link video-id)))
 
 (defun org-yt-image-data-fun (_protocol link _description)
   "Get image corresponding to LINK from youtube.
@@ -296,6 +305,25 @@ are recognized."
                    (overlay-put ol 'after-string description)))))))))))
 
 (advice-add #'org-display-inline-images :after #'org-display-user-inline-images)
+
+
+;; Export
+
+(defun org-yt-export (video-id description backend ext-plist)
+  "Export youtube video with VIDEO-ID to BACKEND.
+If DESCRIPTION is a string put it below the video.
+EXT-PLIST is the data channel for the export backend."
+  (let* ((video-link (org-yt-video-link video-id)))
+    (org-export-string-as
+     (concat
+      (format "[[%s][%s]]" video-link (org-yt-image-link video-id))
+      (when description
+	(format " [[%s][%s]]" video-link description)))
+     backend
+     t
+     ext-plist)))
+
+(org-link-set-parameters "yt" :export #'org-yt-export)
 
 (provide 'org-yt)
 ;;; org-yt.el ends here

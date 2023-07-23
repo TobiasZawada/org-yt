@@ -3,6 +3,9 @@
 
 [[yt:vEpk2ZTqJu4][Emacs conf session with Richard Stallman]]
 
+Currently, export backend specific attributes are not supported.
+So, the following figure is not right-aligned.
+#+ATTR_HTML: :align right
 [[yt:SzA2YODtgK4][Youtube starter]]
 
 [[yt:RQK_DaaX34Q]]
