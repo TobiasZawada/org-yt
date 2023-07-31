@@ -1,11 +1,17 @@
 #+TITLE: Test of Org-mode Youtube (org-yt.el)
 #+AUTHOR: Tobias Zawada
 
+* First section
+** First subsection
+Added sections for testing problems with the interaction of ~org-yt~ and ~org-bullets~ reported in [[https://github.com/TobiasZawada/org-yt/issues/6][issue #6]].
+
 [[yt:vEpk2ZTqJu4][Emacs conf session with Richard Stallman]]
 
 Currently, export backend specific attributes are not supported.
 So, the following figure is not right-aligned.
 #+ATTR_HTML: :align right
 [[yt:SzA2YODtgK4][Youtube starter]]
+
+* Second section
 
 [[yt:RQK_DaaX34Q]]
